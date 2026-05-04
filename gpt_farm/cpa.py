@@ -1,4 +1,4 @@
-"""CPA / CLIProxyAPI integration — push accounts to the auth pool."""
+"""CPA integration — push accounts to the auth pool."""
 
 import json
 import time
