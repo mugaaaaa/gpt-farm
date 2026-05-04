@@ -1,0 +1,13 @@
+[project]
+name = "gpt-farm"
+version = "0.1.0"
+description = "ChatGPT account farm — register, manage, and proxy API access"
+requires-python = ">=3.10"
+dependencies = ["curl_cffi>=0.6", "click>=8.0", "rich>=13.0"]
+
+[project.scripts]
+gpt-farm = "gpt_farm.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

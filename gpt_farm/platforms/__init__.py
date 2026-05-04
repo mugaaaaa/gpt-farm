@@ -1,0 +1,1 @@
+"""Platform registration modules."""

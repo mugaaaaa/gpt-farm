@@ -1,0 +1,12 @@
+{
+  "email_provider": "luckmail",
+  "luckmail_key": "luck_xxx",
+  "luckmail_url": "https://mails.luckyous.com/",
+  "luckmail_email_type": "ms_imap",
+  "gmail_user": "yourname@gmail.com",
+  "gmail_pass": "xxxxxxxxxxxx",
+  "yescaptcha_key": "xxx",
+  "proxy_url": "http://127.0.0.1:7890",
+  "cpa_url": "http://127.0.0.1:8317",
+  "cpa_key": "cliproxyapi"
+}
