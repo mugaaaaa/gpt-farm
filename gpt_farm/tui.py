@@ -111,13 +111,13 @@ class Dashboard(Screen):
                 yield Input(value="5", id="farm-count", placeholder="注册数量")
                 yield Static("Provider:")
                 yield Select(
-                    [("LuckMail (日抛)", "luckmail"), ("Gmail (长期)", "gmail")],
+                    [("LuckMail (短期)", "luckmail"), ("Gmail (长期)", "gmail")],
                     value="luckmail",
                     id="farm-provider",
                 )
                 yield Static("模式:")
                 yield Select(
-                    [("access_token (日抛)", "access_token"), ("refresh_token (长期)", "refresh_token")],
+                    [("access_token (短期)", "access_token"), ("refresh_token (长期)", "refresh_token")],
                     value="access_token",
                     id="farm-mode",
                 )

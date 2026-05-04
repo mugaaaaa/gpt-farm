@@ -16,7 +16,7 @@ pip install -e .
 
 | 配置项 | 用途 | 获取方式 |
 |--------|------|----------|
-| `luckmail_key` | LuckMail 购买真实邮箱（用于日抛号） | [mails.luckyous.com](https://mails.luckyous.com) 注册获取 |
+| `luckmail_key` | LuckMail 购买真实邮箱（用于短期号） | [mails.luckyous.com](https://mails.luckyous.com) 注册获取 |
 | `gmail_user` / `gmail_pass` | Gmail IMAP 收验证码（用于长期号） | 自己的 Gmail + [App Password](https://myaccount.google.com/apppasswords) |
 | `herosms_key` | HeroSMS 接码（ChatGPT 要求手机验证时用） | [hero-sms.com](https://hero-sms.com) 注册获取 |
 | `yescaptcha_key` | YesCaptcha 打码（Turnstile 验证） | [yescaptcha.com](https://yescaptcha.com) 注册获取 |
@@ -29,7 +29,7 @@ pip install -e .
 
 | Provider | 说明 | 适合 |
 |----------|------|------|
-| `luckmail` | 购买真实邮箱，随机域名（`outlook.it` / `outlook.sg` / `outlook.co.il` 等），完全匿名 | 日抛号 |
+| `luckmail` | 购买真实邮箱，随机域名（`outlook.it` / `outlook.sg` / `outlook.co.il` 等），完全匿名 | 短期号 |
 | `gmail` | 自己的 Gmail，使用加号别名（`user+xxx@gmail.com`），需 App Password | 长期号 |
 
 LuckMail `email_type` 选项：
@@ -48,14 +48,14 @@ LuckMail `email_type` 选项：
 
 ## 工作流（2026-05-04 验证可用）
 
-### 日抛号（仅 access_token，约 10 天有效）
+### 短期号（仅 access_token，约 10 天有效）
 
 全自动，无需人工介入。LuckMail 随机邮箱，注册完自动推送 CPA，即开即用。
 
-> 注意：日抛号只有 access_token，没有 refresh_token，约 10 天后过期作废。适合短期大量使用。
+> 注意：短期号只有 access_token，没有 refresh_token，约 10 天后过期作废。适合短期大量使用。
 
 ```bash
-# 注册 5 个日抛号
+# 注册 5 个短期号
 gpt-farm farm -n 5 -e luckmail -m access_token
 
 # 推送到 CPA（也可注册后统一推送）

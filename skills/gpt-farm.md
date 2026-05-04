@@ -11,7 +11,7 @@ GPT-Farm 是一个 ChatGPT 账号农场 CLI 工具，支持批量注册 ChatGPT 
 所有命令支持 `--json` 标志输出结构化 JSON，供 AI Agent 解析。
 
 ```bash
-# 注册 N 个日抛号（仅 access_token，LuckMail 随机邮箱，全自动）
+# 注册 N 个短期号（仅 access_token，LuckMail 随机邮箱，全自动）
 gpt-farm farm -n 5 -e luckmail -m access_token --json
 
 # 注册 N 个长期号（含 refresh_token，Gmail 真实邮箱，需后续人工介入）
@@ -48,7 +48,7 @@ gpt-farm import-rt --file /path/to/rt.txt
 
 ## 两个工作流
 
-### 1. 日抛号（全自动）
+### 1. 短期号（全自动）
 - Provider: `luckmail`
 - Mode: `access_token`
 - 生命周期：约 10 天
@@ -66,7 +66,7 @@ gpt-farm import-rt --file /path/to/rt.txt
 
 1. **注册时 OTP 必须快速填入**：ChatGPT 验证码有效期很短（约 10 分钟），Gmail/LuckMail 的 wait_for_code 会自动轮询。
 2. **IP 质量决定成功率**：数据中心 IP 容易被 OpenAI 风控（返回 `registration_disallowed`），建议使用干净的住宅代理。
-3. **LuckMail `ms_imap` 是目前最稳定的日抛邮箱**：随机多国 Outlook 域名，OpenAI 不会统一拦截。
+3. **LuckMail `ms_imap` 是目前最稳定的短期邮箱**：随机多国 Outlook 域名，OpenAI 不会统一拦截。
 4. **拿 refresh_token 可能触发手机验证**：用户在本地执行 `codex login` 时如果要求输入手机号，Agent 可以用 HeroSMS 获取号码后告知用户填入。
 5. **不要硬编码任何密钥**：所有配置通过 `~/.gpt-farm/config.json` 或环境变量 `GPT_FARM_*` 传入。
 
