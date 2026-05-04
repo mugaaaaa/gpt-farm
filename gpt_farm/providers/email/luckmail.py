@@ -37,12 +37,13 @@ class LuckMailProvider(BaseEmailProvider):
             "Content-Type": "application/json",
         })
         r = sess.post(
-            f"{self.base_url}/api/v1/openapi/user/purchase_emails",
+            f"{self.base_url}/api/v1/openapi/email/purchase",
             json={"project_code": "openai", "quantity": 1, "email_type": self.email_type},
             timeout=15,
         )
         data = r.json()
-        purchases = data.get("purchases") or []
+        inner = data.get("data", data)
+        purchases = inner.get("purchases") or []
         if not purchases:
             raise RuntimeError(f"LuckMail purchase failed: {r.text[:200]}")
         item = purchases[0]
@@ -60,10 +61,10 @@ class LuckMailProvider(BaseEmailProvider):
         deadline = time.time() + timeout
         while time.time() < deadline:
             try:
-                r = sess.get(f"{self.base_url}/api/v1/openapi/user/token_mails/{token}", timeout=10)
+                r = sess.get(f"{self.base_url}/api/v1/openapi/email/token/{token}/mails", timeout=10)
                 for m in r.json().get("mails", []):
                     mid = m.get("message_id", "")
-                    r2 = sess.get(f"{self.base_url}/api/v1/openapi/user/token_mail_detail/{token}/{mid}", timeout=10)
+                    r2 = sess.get(f"{self.base_url}/api/v1/openapi/email/token/{token}/mails/{mid}", timeout=10)
                     detail = r2.json()
                     code = detail.get("verification_code", "")
                     if code:
@@ -81,7 +82,7 @@ class LuckMailProvider(BaseEmailProvider):
         try:
             sess = requests.Session()
             sess.headers.update({"Authorization": f"Bearer {self.api_key}"})
-            r = sess.get(f"{self.base_url}/api/v1/openapi/user/get_balance", timeout=10)
+            r = sess.get(f"{self.base_url}/api/v1/openapi/email/config", timeout=10)
             return r.status_code == 200
         except Exception:
             return False
