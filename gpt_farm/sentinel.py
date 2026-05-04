@@ -75,49 +75,49 @@ def get_sentinel_token(
         context = browser.new_context(**context_opts)
         page = context.new_page()
 
-        # Load Sentinel frame
-        frame_url = "https://sentinel.openai.com/backend-api/sentinel/frame.html"
+        # Load Sentinel frame — use the version-matched URL
+        sdk_version = os.environ.get("SENTINEL_SDK_VERSION", "20260219f9f6")
+        frame_url = f"https://sentinel.openai.com/backend-api/sentinel/frame.html?sv={sdk_version}"
         page.goto(frame_url, wait_until="domcontentloaded", timeout=30000)
 
-        # Wait for the turnstile widget to appear and get token
+        # Wait for the Sentinel SDK to complete and produce token
         sentinel_token = None
         deadline = time.time() + (SDK_WAIT_TIMEOUT / 1000)
 
         while time.time() < deadline and not sentinel_token:
             try:
-                token = page.evaluate("""() => {
-                    // Try to get the token from the iframe/window
-                    if (window.__SENTINEL_TOKEN__) return window.__SENTINEL_TOKEN__;
-                    // Check turnstile response
-                    const turnstileInput = document.querySelector('[name="cf-turnstile-response"]');
-                    if (turnstileInput && turnstileInput.value) {
-                        return JSON.stringify({
-                            p: turnstileInput.value,
-                            t: "",
-                            c: ""
-                        });
+                token_str = page.evaluate("""() => {
+                    // SentinelSDK calls window.parent.postMessage with the token
+                    // The token is available as a global after SDK completes
+                    if (window.__sdk_token__) return window.__sdk_token__;
+                    return null;
+                }""")
+                if token_str:
+                    sentinel_token = token_str
+                    break
+            except Exception:
+                pass
+
+            # Fallback: try getting p/t/c from the page
+            try:
+                result = page.evaluate("""() => {
+                    const pInput = document.querySelector('input[name="cf-turnstile-response"]');
+                    const p = pInput ? pInput.value : '';
+                    // Look for t/c tokens in data attributes or JS globals
+                    const t = (window.__sentinel_t__) || '';
+                    const c = (window.__sentinel_c__) || '';
+                    if (p) {
+                        return JSON.stringify({p, t, c});
                     }
                     return null;
                 }""")
-                if token:
-                    sentinel_token = token
+                if result:
+                    sentinel_token = result
                     break
             except Exception:
                 pass
 
             time.sleep(1)
-
-        # If we didn't get a proper token, try the raw p value approach
-        if not sentinel_token or not isinstance(sentinel_token, str):
-            try:
-                raw = page.evaluate("""() => {
-                    const inp = document.querySelector('input[name="cf-turnstile-response"]');
-                    return inp ? inp.value : null;
-                }""")
-                if raw:
-                    sentinel_token = json.dumps({"p": raw, "t": "", "c": ""})
-            except Exception:
-                pass
 
         context.close()
 
