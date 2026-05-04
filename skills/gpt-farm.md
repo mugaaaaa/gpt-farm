@@ -1,92 +1,88 @@
-# GPT-Farm Skill — AI Agent Usage Guide
+# GPT-Farm Skill — AI Agent 使用指南
 
-## Overview
+## 概述
 
-GPT-Farm is a CLI tool for batch-registering ChatGPT accounts and pushing them to a CPA/CLIProxyAPI pool for API aggregation.
+GPT-Farm 是一个 ChatGPT 账号农场 CLI 工具，支持批量注册 ChatGPT 账号并推送到 CPA（CLIProxyAPI）池中进行 API 聚合。
 
-## Quick Commands
+当前日期参考：2026-05-04，以下工作流均在此日期验证可用。
 
-All commands support `--json` flag for structured output suitable for AI agent parsing.
+## 快速命令
+
+所有命令支持 `--json` 标志输出结构化 JSON，供 AI Agent 解析。
 
 ```bash
-# Register N accounts (AT-only, disposable)
-gpt-farm farm -n 5 -e luckmail -m at --json
+# 注册 N 个日抛号（仅 access_token，LuckMail 随机邮箱，全自动）
+gpt-farm farm -n 5 -e luckmail -m access_token --json
 
-# Register N accounts (with refresh_token, long-term)
-gpt-farm farm -n 2 -e gmail -m rt --json
+# 注册 N 个长期号（含 refresh_token，Gmail 真实邮箱，需后续人工介入）
+gpt-farm farm -n 2 -e gmail -m refresh_token --json
 
-# Push all accounts to CPA
-gpt-farm push --all
+# 推送所有本地账号到 CPA
+gpt-farm push
 
-# Check account pool status
+# 查看账号池状态
 gpt-farm status --json
 
-# Import a manually obtained refresh_token
+# 导入人工获取的 refresh_token
 gpt-farm import-rt --token "rt_xxx..."
+gpt-farm import-rt --file /path/to/rt.txt
 ```
 
-## JSON Output Format
+## JSON 输出格式
 
-### farm (success):
+### farm 成功
 ```json
 {"status": "ok", "email": "xxx@outlook.it", "password": "...", "access_token": "...",
  "refresh_token": "", "id_token": "", "account_id": "", "created_at": "..."}
 ```
 
-### farm (error):
+### farm 失败
 ```json
 {"status": "error", "error": "Password failed (409): ..."}
 ```
 
-### status:
+### status
 ```json
 {"local_accounts": 5, "cpa_pool": 9, "cpa_active": 8}
 ```
 
-## Providers
+## 两个工作流
 
-| Name | Description | Config Keys |
-|------|-------------|-------------|
-| `luckmail` | Purchased real mailboxes | `luckmail_key`, `luckmail_url`, `luckmail_email_type` |
-| `gmail` | Gmail plus-aliases via IMAP | `gmail_user`, `gmail_pass` |
+### 1. 日抛号（全自动）
+- Provider: `luckmail`
+- Mode: `access_token`
+- 生命周期：约 10 天
+- 适合场景：用户需要大量临时 API 额度
+- 执行方式：Agent 执行 `gpt-farm farm` + `gpt-farm push` 即可
 
-## Modes
+### 2. 长期号（需要一次人工）
+- Provider: `gmail`
+- Mode: `refresh_token`
+- 生命周期：数月，可自动续期
+- 适合场景：用户需要稳定长期可用的 API
+- 执行方式：Agent 执行 `gpt-farm farm` 拿到邮箱密码 → 指导用户在本地执行 `codex login` → 用户提供 refresh_token → Agent 执行 `gpt-farm import-rt` + `gpt-farm push`
 
-| Mode | Expiry | Can Get RT? | Best For |
-|------|--------|-------------|----------|
-| `at` | ~10 days | No | Daily disposal, high volume |
-| `rt` | Months | Yes | Long-term, API key replacement |
+## 关键提示
 
-## Configuration
+1. **注册时 OTP 必须快速填入**：ChatGPT 验证码有效期很短（约 10 分钟），Gmail/LuckMail 的 wait_for_code 会自动轮询。
+2. **IP 质量决定成功率**：数据中心 IP 容易被 OpenAI 风控（返回 `registration_disallowed`），建议使用干净的住宅代理。
+3. **LuckMail `ms_imap` 是目前最稳定的日抛邮箱**：随机多国 Outlook 域名，OpenAI 不会统一拦截。
+4. **拿 refresh_token 可能触发手机验证**：用户在本地执行 `codex login` 时如果要求输入手机号，Agent 可以用 HeroSMS 获取号码后告知用户填入。
+5. **不要硬编码任何密钥**：所有配置通过 `~/.gpt-farm/config.json` 或环境变量 `GPT_FARM_*` 传入。
 
-Config file: `~/.gpt-farm/config.json`
+## 常见错误处理
 
-Environment variable override: `GPT_FARM_<KEY>` (e.g. `GPT_FARM_LUCKMAIL_KEY=luck_xxx`)
+| 错误 | 原因 | 处理 |
+|------|------|------|
+| `IP blocked at OAuth` | IP 被 OpenAI 拦截 | 切换代理节点 |
+| `Password failed: 409` | 版本太旧或风控 | 切换 IP 重试 |
+| `OTP timeout` | 邮箱未收到验证码 | 检查邮箱 provider 配置 |
+| `registration_disallowed` | OpenAI 拒绝注册 | 切换 IP + 换邮箱域名 |
 
-## Architecture
+## 文件结构
 
 ```
-gpt-farm/
-├── cli.py           # Click CLI entry
-├── config.py        # Config management (file + env)
-├── cpa.py           # CPA/CLIProxyAPI push integration
-├── platforms/
-│   └── chatgpt.py   # Pure-HTTP ChatGPT registration
-├── providers/
-│   ├── email/
-│   │   ├── base.py  # Email provider interface
-│   │   ├── gmail.py # Gmail IMAP
-│   │   └── luckmail.py
-│   └── sms/
-│       ├── base.py  # SMS provider interface
-│       └── herosms.py
-└── tui.py           # TUI stub
+~/.gpt-farm/
+├── config.json      # 配置文件（不要提交到 Git）
+└── accounts.json    # 本地账号库
 ```
-
-## Adding a New Provider
-
-1. Create `gpt_farm/providers/email/myprovider.py`
-2. Subclass `BaseEmailProvider`
-3. Implement `create()` → `EmailAccount`
-4. Register with `@register("myprovider")`
-5. Done — automatically available as `gpt-farm farm -e myprovider`

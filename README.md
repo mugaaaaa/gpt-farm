@@ -2,6 +2,8 @@
 
 ChatGPT 账号农场 — 批量注册、CPA 聚合、API 分发。
 
+> 文档更新时间：2026-05-04，当前工作流已验证可用。
+
 ## 安装
 
 ```bash
@@ -10,105 +12,110 @@ cd gpt-farm
 pip install -e .
 ```
 
-## 配置
+## 需要准备的 Key
 
-```bash
-cp config.example.json ~/.gpt-farm/config.json
-```
-
-编辑 `~/.gpt-farm/config.json`，填入你的 API key。也支持环境变量覆盖，如 `GPT_FARM_LUCKMAIL_KEY=luck_xxx`。
+| 配置项 | 用途 | 获取方式 |
+|--------|------|----------|
+| `luckmail_key` | LuckMail 购买真实邮箱（用于日抛号） | [mails.luckyous.com](https://mails.luckyous.com) 注册获取 |
+| `gmail_user` / `gmail_pass` | Gmail IMAP 收验证码（用于长期号） | 自己的 Gmail + [App Password](https://myaccount.google.com/apppasswords) |
+| `herosms_key` | HeroSMS 接码（ChatGPT 要求手机验证时用） | [hero-sms.com](https://hero-sms.com) 注册获取 |
+| `yescaptcha_key` | YesCaptcha 打码（Turnstile 验证） | [yescaptcha.com](https://yescaptcha.com) 注册获取 |
+| `proxy_url` | 代理地址 | 机场/住宅代理的 HTTP 代理 URL |
+| `cpa_url` / `cpa_key` | CPA 服务地址和密钥 | 部署 CLIProxyAPI 后获得 |
 
 ## 支持的 Provider
 
 ### 邮箱 Provider
 
-| Provider | 说明 | 配置字段 | 适合 |
-|----------|------|----------|------|
-| `luckmail` | 购买真实邮箱（outlook.it / outlook.sg 等），可指定多国域名 | `luckmail_key`, `luckmail_email_type` | 日抛号，邮箱匿名 |
-| `gmail` | Gmail IMAP 收件，使用加号别名（`user+xxx@gmail.com`） | `gmail_user`, `gmail_pass` | 长期号，需拿 RT |
+| Provider | 说明 | 适合 |
+|----------|------|------|
+| `luckmail` | 购买真实邮箱，随机域名（`outlook.it` / `outlook.sg` / `outlook.co.il` 等），完全匿名 | 日抛号 |
+| `gmail` | 自己的 Gmail，使用加号别名（`user+xxx@gmail.com`），需 App Password | 长期号 |
 
-LuckMail 支持的类型：
+LuckMail `email_type` 选项：
 
-| `luckmail_email_type` | 域名示例 | 价格 |
-|-----------------------|----------|------|
-| `ms_imap` | `@outlook.it`, `@outlook.sg`, `@outlook.co.il` ... | $0.02 |
-| `self_built` | `@caijiuduolian.bbroot.com` 等自建域名 | $0.002 |
-| `google_variant` | `@googlemail.com` | $0.01 |
+| `luckmail_email_type` | 域名示例 |
+|-----------------------|----------|
+| `ms_imap` | `@outlook.it`, `@outlook.sg`, `@outlook.co.il`, `@outlook.com.vn` ... |
+| `self_built` | `@caijiuduolian.bbroot.com` 等自建域名 |
+| `google_variant` | `@googlemail.com` |
 
 ### 短信 Provider
 
-| Provider | 说明 | 配置字段 |
-|----------|------|----------|
-| `herosms` | HeroSMS 接码，用于 ChatGPT 手机验证 | `herosms_key`, `herosms_country`, `herosms_service` |
+| Provider | 说明 |
+|----------|------|
+| `herosms` | HeroSMS 接码，ChatGPT 手机验证时使用，配置 `herosms_key`、`herosms_country`（默认 `187` 美国）、`herosms_service`（默认 `dr`） |
 
-## 工作流
+## 工作流（2026-05-04 验证可用）
 
-### 工作流 A：刷日抛号（AT only）
+### 日抛号（仅 access_token，约 10 天有效）
 
-全自动，无需人工介入。LuckMail 随机邮箱，`access_token_only` 模式，约 10 天有效期。
+全自动，无需人工介入。LuckMail 随机邮箱，注册完自动推送 CPA，即开即用。
+
+> 注意：日抛号只有 access_token，没有 refresh_token，约 10 天后过期作废。适合短期大量使用。
 
 ```bash
-# 注册 5 个
-gpt-farm farm -n 5 -e luckmail -m at
+# 注册 5 个日抛号
+gpt-farm farm -n 5 -e luckmail -m access_token
 
-# 推送到 CPA
+# 推送到 CPA（也可注册后统一推送）
 gpt-farm push
 
-# 查看状态
+# 查看池子状态
 gpt-farm status
 ```
 
-注册 → 推送 CPA → 池子里自动轮换 → API 直接可用。
+### 长期号（含 refresh_token，可长期续期）
 
-适合：量大、用完扔、不介意有效期。
+先自动注册拿到 access_token，再人工登录 Codex CLI 获取 refresh_token。
 
-### 工作流 B：刷长期号（RT）
-
-需要一次人工介入拿 refresh_token。Gmail 真实邮箱，拿到的 RT 可以长期续期。
+> 注意：拿 refresh_token 的过程中 OpenAI 可能要求手机验证，此时 HeroSMS 自动提供美国号码接码。
 
 ```bash
-# 注册（拿到 at）
-gpt-farm farm -n 1 -e gmail -m rt
+# 第一步：自动注册（服务器）
+gpt-farm farm -n 1 -e gmail -m refresh_token
 
-# 在本机安装 Codex CLI 登录拿 RT：
-#   brew install openai/tap/codex
-#   codex login --email <上面注册的邮箱> --password <密码>
-#   cat ~/.codex/auth.json | grep refresh_token
+# 第二步：人工拿 refresh_token（本地 Mac）
+# brew install openai/tap/codex
+# codex login --email <上一步输出的邮箱> --password <密码>
+# cat ~/.codex/auth.json | grep refresh_token
 
-# 导入 RT
+# 第三步：导入 refresh_token（服务器）
 gpt-farm import-rt --token "rt_xxx..."
 
-# 推送
+# 第四步：推送 CPA
 gpt-farm push
 ```
 
-适合：长期稳定使用、需要可靠 API。
+### 已有 refresh_token 直接导入
 
-### 工作流 C：已有 RT 直接导入
+如果你已经通过其他方式拿到了 refresh_token：
 
 ```bash
 gpt-farm import-rt --token "rt_xxx..."
 gpt-farm push
 ```
+
+`import-rt` 会自动交换出新的 access_token、提取账号邮箱、生成 CPA 认证文件并推送。
 
 ## 命令参考
 
 | 命令 | 说明 |
 |------|------|
-| `gpt-farm farm -n N -e <provider> -m <mode>` | 注册 N 个账号 |
-| `gpt-farm push` | 推送全部账号到 CPA |
-| `gpt-farm status` | 查看账号池状态 |
-| `gpt-farm import-rt --token "rt_..."` | 导入 refresh_token |
-| `gpt-farm tui` | 交互式 TUI |
+| `gpt-farm farm -n N -e <provider> -m <mode>` | 注册 N 个账号，mode 为 `access_token` 或 `refresh_token` |
+| `gpt-farm push` | 推送本地所有账号到 CPA |
+| `gpt-farm status` | 查看本地账号库 + CPA 池状态 |
+| `gpt-farm import-rt --token "rt_..."` | 导入 refresh_token 并推送 CPA |
+| `gpt-farm tui` | 交互式 TUI（开发中） |
 
-所有命令支持 `--json` 输出，方便 AI Agent 调用。
+所有命令支持 `--json` 输出，方便 AI Agent 调用和脚本解析。
 
 ## 架构
 
 ```
 gpt_farm/
 ├── cli.py              # Click CLI 入口
-├── config.py           # 配置管理（文件 + 环境变量）
+├── config.py           # 配置管理（文件 + 环境变量，无硬编码密钥）
 ├── cpa.py              # CPA 推送
 ├── tui.py              # TUI 预留
 ├── platforms/
@@ -125,9 +132,7 @@ gpt_farm/
     └── gpt-farm.md      # AI Agent 技能文件
 ```
 
-## 扩展
-
-添加新 Provider：
+## 扩展 Provider
 
 1. 创建 `gpt_farm/providers/email/myprovider.py`
 2. 继承 `BaseEmailProvider`，实现 `create()` → `EmailAccount`
