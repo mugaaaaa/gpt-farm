@@ -7,6 +7,7 @@ Based on the community codex-register approach.
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
 import traceback
