@@ -1,42 +1,47 @@
-# GPT-Farm Skill — AI Agent 使用指南
+# GPT-Farm Skill — AI Agent Usage Guide
 
-## 概述
+## Overview
 
-GPT-Farm 是一个 ChatGPT 账号农场 CLI 工具，支持批量注册 ChatGPT 账号并推送到 CPA（CLIProxyAPI）池中进行 API 聚合。
+GPT-Farm is a CLI tool for batch-registering ChatGPT accounts and pushing them to a CPA (CLIProxyAPI) pool for API aggregation.
 
-当前日期参考：2026-05-04，以下工作流均在此日期验证可用。
+Current date reference: 2026-05-04. All workflows below have been verified as of this date.
 
-## 快速命令
+## Quick Commands
 
-所有命令支持 `--json` 标志输出结构化 JSON，供 AI Agent 解析。
+All commands accept `--json` for structured output consumable by AI agents.
 
 ```bash
-# 注册 N 个短期号（仅 access_token，LuckMail 随机邮箱，全自动）
+# Register N short-term accounts (access_token only, LuckMail random email, fully automated)
 gpt-farm farm -n 5 -e luckmail -m access_token --json
 
-# 注册 N 个长期号（含 refresh_token，Gmail 真实邮箱，需后续人工介入）
+# Register N long-term accounts (with refresh_token, Gmail, requires manual step)
 gpt-farm farm -n 2 -e gmail -m refresh_token --json
 
-# 推送所有本地账号到 CPA
+# Push all local accounts to CPA
 gpt-farm push
 
-# 查看账号池状态
+# Check account pool status
 gpt-farm status --json
 
-# 导入人工获取的 refresh_token
+# Import a manually obtained refresh_token
 gpt-farm import-rt --token "rt_xxx..."
 gpt-farm import-rt --file /path/to/rt.txt
+
+# Export accounts
+gpt-farm export -o backup.json
+# Import accounts (deduplicated)
+gpt-farm import --file backup.json
 ```
 
-## JSON 输出格式
+## JSON Output Format
 
-### farm 成功
+### farm (success)
 ```json
 {"status": "ok", "email": "xxx@outlook.it", "password": "...", "access_token": "...",
  "refresh_token": "", "id_token": "", "account_id": "", "created_at": "..."}
 ```
 
-### farm 失败
+### farm (error)
 ```json
 {"status": "error", "error": "Password failed (409): ..."}
 ```
@@ -46,43 +51,62 @@ gpt-farm import-rt --file /path/to/rt.txt
 {"local_accounts": 5, "cpa_pool": 9, "cpa_active": 8}
 ```
 
-## 两个工作流
+## Two Workflows
 
-### 1. 短期号（全自动）
+### 1. Short-Term Accounts (fully automated)
 - Provider: `luckmail`
 - Mode: `access_token`
-- 生命周期：约 10 天
-- 适合场景：用户需要大量临时 API 额度
-- 执行方式：Agent 执行 `gpt-farm farm` + `gpt-farm push` 即可
+- Lifespan: ~10 days
+- Use case: user needs bulk temporary API quota
+- Agent steps: run `gpt-farm farm` + `gpt-farm push`
 
-### 2. 长期号（需要一次人工）
+### 2. Long-Term Accounts (one manual step)
 - Provider: `gmail`
 - Mode: `refresh_token`
-- 生命周期：数月，可自动续期
-- 适合场景：用户需要稳定长期可用的 API
-- 执行方式：Agent 执行 `gpt-farm farm` 拿到邮箱密码 → 指导用户在本地执行 `codex login` → 用户提供 refresh_token → Agent 执行 `gpt-farm import-rt` + `gpt-farm push`
+- Lifespan: months, auto-refreshs
+- Use case: user needs stable long-term API access
+- Agent steps:
+  1. Run `gpt-farm farm` to get email + password
+  2. Instruct user to run `codex login` locally with those credentials
+  3. User provides refresh_token
+  4. Run `gpt-farm import-rt` + `gpt-farm push`
 
-## 关键提示
+## Providers
 
-1. **注册时 OTP 必须快速填入**：ChatGPT 验证码有效期很短（约 10 分钟），Gmail/LuckMail 的 wait_for_code 会自动轮询。
-2. **IP 质量决定成功率**：数据中心 IP 容易被 OpenAI 风控（返回 `registration_disallowed`），建议使用干净的住宅代理。
-3. **LuckMail `ms_imap` 是目前最稳定的短期邮箱**：随机多国 Outlook 域名，OpenAI 不会统一拦截。
-4. **拿 refresh_token 可能触发手机验证**：用户在本地执行 `codex login` 时如果要求输入手机号，Agent 可以用 HeroSMS 获取号码后告知用户填入。
-5. **不要硬编码任何密钥**：所有配置通过 `~/.gpt-farm/config.json` 或环境变量 `GPT_FARM_*` 传入。
+### Email
 
-## 常见错误处理
+| Name | Description | Best For |
+|------|-------------|----------|
+| `luckmail` | Purchased real mailboxes (outlook.it, outlook.sg, etc.) | Short-term, anonymous |
+| `gmail` | Gmail plus-aliases via IMAP | Long-term, with refresh_token |
 
-| 错误 | 原因 | 处理 |
-|------|------|------|
-| `IP blocked at OAuth` | IP 被 OpenAI 拦截 | 切换代理节点 |
-| `Password failed: 409` | 版本太旧或风控 | 切换 IP 重试 |
-| `OTP timeout` | 邮箱未收到验证码 | 检查邮箱 provider 配置 |
-| `registration_disallowed` | OpenAI 拒绝注册 | 切换 IP + 换邮箱域名 |
+### SMS
 
-## 文件结构
+| Name | Description |
+|------|-------------|
+| `herosms` | HeroSMS for phone SMS verification |
+
+## Key Tips
+
+1. **OTP must be filled quickly**: ChatGPT verification codes expire in ~10 minutes. The provider's `wait_for_code` auto-polls.
+2. **IP quality determines success rate**: Datacenter IPs often get `registration_disallowed`. Use clean residential proxies.
+3. **`luckmail` with `ms_imap` is the most reliable email for short-term accounts**: Random multi-country Outlook domains evade unified blocking.
+4. **Retrieving refresh_token may trigger phone verification**: When user runs `codex login`, if prompted for phone number, agent can use HeroSMS to get a number and provide it.
+5. **Never hardcode credentials**: All config via `~/.gpt-farm/config.json` or `GPT_FARM_*` environment variables.
+
+## Common Errors
+
+| Error | Cause | Action |
+|-------|-------|--------|
+| `IP blocked at OAuth` | IP blocked by OpenAI | Switch proxy node |
+| `Password failed: 409` | Version too old or anti-fraud | Switch IP and retry |
+| `OTP timeout` | Email not received | Check provider config |
+| `registration_disallowed` | OpenAI rejected registration | Switch IP + change email domain |
+
+## File Layout
 
 ```
 ~/.gpt-farm/
-├── config.json      # 配置文件（不要提交到 Git）
-└── accounts.json    # 本地账号库
+├── config.json      # Configuration (do NOT commit to git)
+└── accounts.json    # Local account store
 ```
