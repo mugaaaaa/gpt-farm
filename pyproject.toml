@@ -7,6 +7,7 @@ dependencies = ["curl_cffi>=0.6", "click>=8.0", "rich>=13.0"]
 
 [project.optional-dependencies]
 tui = ["textual>=0.50"]
+playwright = ["playwright>=1.40"]
 
 [project.scripts]
 gpt-farm = "gpt_farm.cli:main"

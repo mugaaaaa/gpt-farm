@@ -13,6 +13,10 @@ pip install -e .
 
 # 如需 TUI
 pip install -e ".[tui]"
+
+# 如需 Playwright Sentinel（提高注册成功率）
+pip install -e ".[playwright]"
+playwright install chromium
 ```
 
 ## 服务器部署

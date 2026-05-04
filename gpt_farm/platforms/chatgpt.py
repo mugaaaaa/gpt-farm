@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from curl_cffi import requests as curl_requests
 
 from ..providers.email.base import BaseEmailProvider, EmailAccount
+from ..sentinel import get_sentinel_token
 
 CLIENT_ID = "pdlLIX2Y72MIl2rhLhTE9VV9bN905kBh"
 AUTH_URL = "https://auth.openai.com/authorize"
@@ -123,13 +124,19 @@ def register(
     if not did:
         raise RuntimeError("OAuth authorize failed — IP may be blocked")
 
-    # 2. Sentinel tokens
-    sen1 = _fetch_sentinel("authorize_continue", did, proxies)
-    sentinel = (
-        json.dumps({"p": "", "t": "", "c": sen1, "id": did, "flow": "authorize_continue"})
-        if sen1 else None
-    )
-    sen2 = _fetch_sentinel("oauth_create_account", did, proxies)
+    # 2. Sentinel tokens (Playwright-based, handles Turnstile)
+    try:
+        sentinel = get_sentinel_token("authorize_continue", device_id=did, proxy=proxy)
+    except Exception:
+        sentinel = _fetch_sentinel("authorize_continue", did, proxies)  # fallback to PoW
+        sentinel = (
+            json.dumps({"p": "", "t": "", "c": sentinel, "id": did, "flow": "authorize_continue"})
+            if sentinel else None
+        )
+    try:
+        sen2_token = get_sentinel_token("oauth_create_account", device_id=did, proxy=proxy)
+    except Exception:
+        sen2_token = _fetch_sentinel("oauth_create_account", did, proxies)
 
     # 3. Submit email
     h = {"referer": "https://auth.openai.com/create-account", "accept": "application/json", "content-type": "application/json"}
@@ -167,8 +174,8 @@ def register(
 
     # 7. Create account (about_you)
     h["referer"] = "https://auth.openai.com/about-you"
-    if sen2:
-        h["openai-sentinel-so-token"] = sen2
+    if sen2_token:
+        h["openai-sentinel-so-token"] = sen2_token
     r = s.post(
         "https://auth.openai.com/api/accounts/create_account",
         headers=h,
