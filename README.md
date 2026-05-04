@@ -106,7 +106,7 @@ gpt-farm push
 | `gpt-farm push` | 推送本地所有账号到 CPA |
 | `gpt-farm status` | 查看本地账号库 + CPA 池状态 |
 | `gpt-farm import-rt --token "rt_..."` | 导入 refresh_token 并推送 CPA |
-| `gpt-farm tui` | 交互式 TUI（开发中） |
+| `gpt-farm tui` | 交互式管理面板（设置 / 注册 / 状态） |
 
 所有命令支持 `--json` 输出，方便 AI Agent 调用和脚本解析。
 
