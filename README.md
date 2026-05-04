@@ -10,6 +10,39 @@ ChatGPT 账号农场 — 批量注册、CPA 聚合、API 分发。
 git clone https://github.com/mugaaaaa/gpt-farm.git
 cd gpt-farm
 pip install -e .
+
+# 如需 TUI
+pip install -e ".[tui]"
+```
+
+## 服务器部署
+
+GPT-Farm 需要配合以下基础设施运行。推荐 Docker Compose 一键部署：
+
+```yaml
+# docker-compose.yml 核心服务
+services:
+  any-auto-register:   # 注册引擎（Python）
+  cliproxyapi:         # CPA 认证池 + API 网关
+  caddy:               # 反向代理（可选）
+```
+
+```bash
+# 1. 部署基础设施
+git clone <your-infra-repo>
+docker compose up -d
+
+# 2. 安装 gpt-farm（可装在同一台服务器或任意可访问基础设施的机器）
+pip install -e .
+
+# 3. 配置
+cp config.example.json ~/.gpt-farm/config.json
+# 编辑 ~/.gpt-farm/config.json，填入 proxy_url 和 cpa_url
+
+# 4. 开始使用
+gpt-farm farm -n 5 -e luckmail -m access_token
+gpt-farm push
+gpt-farm status
 ```
 
 ## 需要准备的 Key
@@ -98,6 +131,24 @@ gpt-farm push
 
 `import-rt` 会自动交换出新的 access_token、提取账号邮箱、生成 CPA 认证文件并推送。
 
+### 批量导出和导入
+
+在不同机器之间迁移账号：
+
+```bash
+# 导出为 JSON
+gpt-farm export -o accounts_backup.json
+
+# 导出为 CSV
+gpt-farm export -o accounts_backup.csv --format csv
+
+# 从文件导入（去重）
+gpt-farm import --file accounts_backup.json
+
+# 导入并直接推送 CPA
+gpt-farm import --file accounts_backup.json --push
+```
+
 ## 命令参考
 
 | 命令 | 说明 |
@@ -106,6 +157,8 @@ gpt-farm push
 | `gpt-farm push` | 推送本地所有账号到 CPA |
 | `gpt-farm status` | 查看本地账号库 + CPA 池状态 |
 | `gpt-farm import-rt --token "rt_..."` | 导入 refresh_token 并推送 CPA |
+| `gpt-farm export -o file.json` | 导出全部账号到 JSON 或 CSV |
+| `gpt-farm import --file file.json` | 从文件导入账号（去重），可附带 `--push` |
 | `gpt-farm tui` | 交互式管理面板（设置 / 注册 / 状态） |
 
 所有命令支持 `--json` 输出，方便 AI Agent 调用和脚本解析。
@@ -117,17 +170,17 @@ gpt_farm/
 ├── cli.py              # Click CLI 入口
 ├── config.py           # 配置管理（文件 + 环境变量，无硬编码密钥）
 ├── cpa.py              # CPA 推送
-├── tui.py              # TUI 预留
+├── tui.py              # 交互式管理面板（仪表盘 / 注册 / 设置）
 ├── platforms/
-│   └── chatgpt.py      # ChatGPT 纯协议注册
+│   └── chatgpt.py      # ChatGPT 纯协议注册引擎
 ├── providers/
 │   ├── email/           # 邮箱 Provider
-│   │   ├── base.py
-│   │   ├── gmail.py
-│   │   └── luckmail.py
+│   │   ├── base.py     # 抽象基类
+│   │   ├── gmail.py    # Gmail IMAP
+│   │   └── luckmail.py # LuckMail 购买邮箱
 │   └── sms/             # 短信 Provider
-│       ├── base.py
-│       └── herosms.py
+│       ├── base.py     # 抽象基类
+│       └── herosms.py  # HeroSMS 接码
 └── skills/
     └── gpt-farm.md      # AI Agent 技能文件
 ```

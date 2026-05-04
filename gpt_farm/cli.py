@@ -231,6 +231,63 @@ def import_rt(ctx, rt_token, rt_file):
         click.echo("  Pushed to CPA ✅")
 
 
+# ========== export ==========
+
+@main.command(name="export")
+@click.option("--output", "-o", default=None, help="Output file path (default: stdout)")
+@click.option("--format", "-f", "fmt", type=click.Choice(["json", "csv"]), default="json", help="Export format")
+@click.pass_context
+def export_cmd(ctx, output, fmt):
+    """Export all accounts to JSON or CSV."""
+    accounts = _load_accounts()
+    if fmt == "json":
+        content = json.dumps(accounts, indent=2, ensure_ascii=False)
+    else:
+        import io, csv as csv_mod
+        buf = io.StringIO()
+        if accounts:
+            writer = csv_mod.DictWriter(buf, fieldnames=accounts[0].keys())
+            writer.writeheader()
+            writer.writerows(accounts)
+        content = buf.getvalue()
+
+    if output:
+        Path(output).write_text(content, encoding="utf-8")
+        click.echo(f"Exported {len(accounts)} accounts to {output}")
+    else:
+        click.echo(content)
+
+
+# ========== import (from file) ==========
+
+@main.command(name="import")
+@click.option("--file", "-f", "import_file", required=True, help="JSON file to import")
+@click.option("--push", "do_push", is_flag=True, help="Push to CPA after import")
+@click.pass_context
+def import_cmd(ctx, import_file, do_push):
+    """Import accounts from a JSON file."""
+    cfg: Config = ctx.obj["cfg"]
+    data = json.loads(Path(import_file).read_text(encoding="utf-8"))
+    if not isinstance(data, list):
+        raise click.BadParameter("Import file must be a JSON array")
+
+    existing = _load_accounts()
+    existing_emails = {a["email"] for a in existing}
+    new_count = 0
+    for acct in data:
+        if acct.get("email") not in existing_emails:
+            existing.append(acct)
+            existing_emails.add(acct["email"])
+            new_count += 1
+
+    _save_accounts(existing)
+    click.echo(f"Imported {new_count} new accounts (total: {len(existing)})")
+
+    if do_push and cfg["cpa_url"]:
+        new_accounts = [a for a in data if a.get("email") not in existing_emails or True]
+        push_accounts(new_accounts, cfg["cpa_url"], cfg["cpa_key"])
+        click.echo("Pushed to CPA ✅")
+
 # ========== tui ==========
 
 @main.command()
