@@ -5,7 +5,7 @@ ChatGPT account farming toolkit — batch register, CPA aggregation, API distrib
 ## Install
 
 ```bash
-git clone https://github.com/YOUR_USER/gpt-farm.git
+git clone https://github.com/mugaaaaa/gpt-farm.git
 cd gpt-farm
 pip install -e .
 ```
